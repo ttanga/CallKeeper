@@ -29,13 +29,13 @@ Run on the PBX server:
 ```bash
 sudo mkdir -p /apps
 cd /apps
-sudo git clone --branch develop https://github.com/ttanga/CallKeeper.git callkeeper-src
-cd callkeeper-src
+sudo git clone --branch develop https://github.com/ttanga/CallKeeper.git callkeeper
+cd callkeeper
 sudo bash install.sh
 sudoedit /apps/callkeeper/config.json
 ```
 
-A private repository requires GitHub authentication; a public repository can be cloned without credentials. The installer copies the application and systemd unit, creates the state directory, and creates the configuration only if absent. It does not change Asterisk configuration or start the service.
+A private repository requires GitHub authentication; a public repository can be cloned without credentials. The installer runs directly in /apps/callkeeper, installs the systemd unit and management CLI, creates the state directory, and creates the configuration only if absent. It does not change Asterisk configuration or start the service.
 
 Before starting, follow [DEPLOY.md](DEPLOY.md). Confirm that the GSM gateway calls extension 2000 in context from-gateway, that the route reads AstDB gateway/target, and that every configured target is allowed by the dialplan. Keep provisioning disabled.
 
@@ -123,7 +123,7 @@ These commands are available now via systemd:
 | Follow logs | sudo journalctl -u callkeeper -f |
 | Edit settings | sudoedit /apps/callkeeper/config.json |
 
-A standalone `callkeeper` management CLI (start, stop, restart, status, logs, follow, edit, update, test, version) is planned but not installed by the current script.
+The installer provides `/usr/local/bin/callkeeper`. Run as root: `callkeeper start`, `stop`, `restart`, `enable`, `disable`, `status`, `logs`, `follow`, `edit`, `update`, `test`, or `version` (each as a separate subcommand). `test` runs unit tests, not a live call. `update` stops the service, pulls with --ff-only, installs and starts it; on failure it may remain stopped.
 
 ## Update
 
@@ -131,7 +131,7 @@ Back up configuration and state securely before updating. Stop the service for a
 
 ```bash
 sudo systemctl stop callkeeper
-cd /apps/callkeeper-src
+cd /apps/callkeeper
 sudo git pull --ff-only
 sudo bash install.sh
 sudo systemctl start callkeeper
@@ -143,9 +143,8 @@ The installer preserves existing config.json and state. It does not automaticall
 ## Layout
 
 ```text
-/apps/callkeeper-src/             Git checkout
-/apps/callkeeper/
-  callkeeper.py                   Installed application
+/apps/callkeeper/                 Git checkout and runtime
+  callkeeper.py                   Application source
   config.json                     Local secrets and settings
   state/
     callkeeper.sqlite             Settings, devices, outage history
@@ -168,7 +167,7 @@ Telegram password messages use protect_content and scheduled deletion, not end-t
 ```bash
 python3 -m py_compile callkeeper.py callkeeper-provision
 python3 -m unittest -v
-bash -n install.sh
+bash -n install.sh && bash -n manage.sh
 ```
 
 The Publish workflow is configured to run checks and build an archive; version tags can trigger prerelease publication. Successful CI and production deployment have not yet been confirmed. Git-based installation does not require a release archive.
