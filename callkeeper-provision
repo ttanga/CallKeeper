@@ -88,7 +88,11 @@ password={password}
             out=cli("pjsip show endpoint "+key)
             if not re.search(r"Endpoint:\s+"+key+r"(?:\s|/)",out) or "transport-tls" not in out:
                 raise RuntimeError("Endpoint verification failed")
+            cli("database put gateway_allowed "+key+" 1")
+            if not re.search(r"Value:\s*1\s*$",cli("database get gateway_allowed "+key),re.M):
+                raise RuntimeError("Route authorization failed")
         except Exception:
+            cli("database del gateway_allowed "+key)
             write(old)
             cli("pjsip reload")
             raise
