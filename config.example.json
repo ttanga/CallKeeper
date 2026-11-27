@@ -19,5 +19,9 @@
       "name": "Second phone",
       "target": true
     }
-  }
+  },
+  "provision_enabled": false,
+  "sip_host": "datapasa.top",
+  "sip_port": 35061,
+  "password_message_ttl": 60
 }
