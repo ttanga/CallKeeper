@@ -21,7 +21,7 @@
     }
   },
   "provision_enabled": false,
-  "sip_host": "datapasa.top",
+  "sip_host": "sip.example.com",
   "sip_port": 35061,
   "password_message_ttl": 60
 }
