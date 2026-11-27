@@ -1,0 +1,23 @@
+{
+  "bot_token": "REPLACE",
+  "chat_id": 0,
+  "user_ids": [],
+  "poll_seconds": 3,
+  "down_delay": 60,
+  "monitor_enabled": false,
+  "default_target": "1002",
+  "phones": {
+    "1001": {
+      "name": "Pixel GSM Gateway",
+      "target": false
+    },
+    "1002": {
+      "name": "Samsung",
+      "target": true
+    },
+    "1003": {
+      "name": "Second phone",
+      "target": true
+    }
+  }
+}
