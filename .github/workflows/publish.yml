@@ -13,8 +13,8 @@ jobs:
       - uses: actions/checkout@v4
       - run: python3 -m py_compile callkeeper.py callkeeper-provision
       - run: python3 -m unittest -v
-      - run: bash -n install.sh
-      - run: tar -czf callkeeper.tar.gz callkeeper.py callkeeper-provision config.example.json callkeeper.service install.sh README.md DEPLOY.md PROVISION.md
+      - run: bash -n install.sh && bash -n manage.sh
+      - run: tar -czf callkeeper.tar.gz callkeeper.py callkeeper-provision config.example.json callkeeper.service install.sh manage.sh README.md DEPLOY.md PROVISION.md
       - uses: actions/upload-artifact@v4
         with:
           name: callkeeper
