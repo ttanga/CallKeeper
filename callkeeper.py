@@ -8,6 +8,7 @@ import subprocess
 import threading
 import time
 import urllib.request
+import urllib.error
 from pathlib import Path
 
 ROOT = Path("/apps/callkeeper")
@@ -79,7 +80,11 @@ class App:
             if not obj["ok"]:
                 raise RuntimeError("Telegram rejected request")
             return obj["result"]
-        except Exception:
+        except urllib.error.HTTPError as exc:
+            LOG.warning("Telegram method %s failed: HTTP %s", method, exc.code)
+            raise RuntimeError("Telegram API HTTP "+str(exc.code)) from None
+        except Exception as exc:
+            LOG.warning("Telegram method %s failed: %s", method, type(exc).__name__)
             raise RuntimeError("Telegram API request failed") from None
     def send(self, text, keyboard=None):
         args = {"chat_id":self.c["chat_id"],"text":text}
@@ -187,11 +192,12 @@ class App:
             status=self.snapshot()
             lines=["CallKeeper","🟢 Asterisk","Получатель: "+self.label(target)]
             lines += [("🟢 " if up else "🔴 ")+self.label(k) for k,up in status.items()]
-        except Exception:
+        except Exception as exc:
+            LOG.warning("Menu PBX query failed: %s", type(exc).__name__)
             target=None
             lines=["CallKeeper","⚠️ Asterisk CLI недоступен или ответ не распознан"]
         buttons=[[{"text":("✓ " if k==target else "")+self.label(k),"callback_data":"target:"+k}] for k in self.targets]
-        buttons += [[{"text":"Добавить телефон","callback_data":"add"}], [{"text":"Тестовый звонок","callback_data":"test_confirm"},{"text":"Обновить","callback_data":"menu"}],
+        buttons += [[{"text":"Добавить телефон","callback_data":"add"}], [{"text":"Тестовый звонок","callback_data":"test_confirm"},{"text":"Обновить статус","callback_data":"menu"}],
                     [{"text":"Уведомления","callback_data":"settings"},{"text":"История","callback_data":"history"}]]
         self.send("\n".join(lines),buttons)
     def settings(self):
@@ -209,8 +215,11 @@ class App:
             if cb.get("message",{}).get("chat",{}).get("type") != "private" or not self.authorized(cb.get("from",{}).get("id"),cb.get("message",{}).get("chat",{}).get("id")):
                 self.api("answerCallbackQuery",callback_query_id=cb["id"],text="Нет доступа")
                 return
-            self.api("answerCallbackQuery",callback_query_id=cb["id"])
             action=cb.get("data","")
+            try:
+                self.api("answerCallbackQuery",callback_query_id=cb["id"])
+            except RuntimeError:
+                LOG.warning("Callback acknowledgement failed; continuing authorized action")
             if action=="add":
                 self.pending=True
                 self.send("Введите название нового телефона или /cancel")
@@ -268,8 +277,8 @@ class App:
                     self.put("offset",offset)
                     try:
                         self.handle(update)
-                    except Exception:
-                        LOG.warning("Command failed")
+                    except Exception as exc:
+                        LOG.warning("Command failed: %s", type(exc).__name__)
                         self.send("⚠️ Команда не выполнена или результат не подтверждён.")
             except Exception:
                 LOG.warning("Polling failed; retrying")
