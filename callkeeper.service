@@ -1,0 +1,22 @@
+[Unit]
+Description=CallKeeper Telegram control
+After=network-online.target asterisk.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=asterisk
+Group=asterisk
+WorkingDirectory=/apps/callkeeper
+ExecStart=/usr/bin/python3 /apps/callkeeper/callkeeper.py
+Restart=on-failure
+RestartSec=5
+UMask=0077
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+PrivateTmp=true
+ReadWritePaths=/apps/callkeeper/state
+
+[Install]
+WantedBy=multi-user.target
