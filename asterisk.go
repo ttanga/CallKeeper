@@ -49,15 +49,14 @@ func(p PBX) SetTarget(ctx context.Context,id string,phones map[string]Phone)erro
  if !sipID.MatchString(id)||!phones[id].Target{return fmt.Errorf("target not allowed")}
  out,e:=p.CLI(ctx,"pjsip show endpoint "+id);if e!=nil{return e}
  if !regexp.MustCompile("Endpoint:\\s+"+id+"(?:\\s|/)").MatchString(out){return fmt.Errorf("endpoint not found")}
- // Existing dialplan permits only these two IDs until provisioning migration.
- if id!="1002"&&id!="1003"{return fmt.Errorf("target not supported by current dialplan")}
+ if !p.RouteAllowed(ctx,id){return fmt.Errorf("target not supported by current dialplan")}
  if _,e=p.CLI(ctx,"database put gateway target "+id);e!=nil{return e}
  actual,e:=p.Target(ctx,"");if e!=nil||actual!=id{return fmt.Errorf("route not confirmed")}
  return nil
 }
 func(p PBX) Test(ctx context.Context,phones map[string]Phone,fallback string)error{
  id,e:=p.Target(ctx,fallback);if e!=nil{return e}
- if !phones[id].Target||(id!="1002"&&id!="1003"){return fmt.Errorf("invalid target")}
+ if !phones[id].Target||!p.RouteAllowed(ctx,id){return fmt.Errorf("invalid target")}
  out,e:=p.CLI(ctx,"dialplan show 2000@from-gateway");if e!=nil{return e}
  if !regexp.MustCompile("2000\\s*=>|['\"]2000['\"]").MatchString(out){return fmt.Errorf("route 2000 not found")}
  out,e=p.CLI(ctx,"channel originate Local/2000@from-gateway application Echo")
@@ -96,7 +95,7 @@ func(a *App) Menu(ctx context.Context){
  for _,id:=range ids{
   p:=phones[id];mark:="⚪";if se==nil{mark="🔴";if statuses[id]{mark="🟢"}}
   lines=append(lines,mark+" "+id+" — "+p.Name)
-  if p.Target&&(id=="1002"||id=="1003"){label:=id+" — "+p.Name;if id==target{label="✓ "+label};buttons=append(buttons,[]TGButton{{Text:label,Data:"target:"+id}})}
+  if p.Target&&a.PBX.RouteAllowed(ctx,id){label:=id+" — "+p.Name;if id==target{label="✓ "+label};buttons=append(buttons,[]TGButton{{Text:label,Data:"target:"+id}})}
  }
  buttons=append(buttons,[]TGButton{{Text:"Тестовый звонок",Data:"test_confirm"},{Text:"Обновить статус",Data:"menu"}})
  if a.Config.ProvisionEnabled{buttons=append(buttons,[]TGButton{{Text:"Добавить телефон",Data:"add"}})}
@@ -151,4 +150,13 @@ func(a *App) Handle(ctx context.Context,u TGUpdate){
  default:a.send(ctx,"Команда устарела или пока не поддерживается.",nil)
  }
  if e!=nil{log.Printf("command failed: %v",e);a.send(ctx,"⚠️ Команда не выполнена или результат не подтверждён.",nil)}
+}
+
+func(p PBX) RouteAllowed(ctx context.Context,id string)bool{
+ if id=="1002"||id=="1003"{return true}
+ if !sipID.MatchString(id)||id=="1001"{return false}
+ route,e:=p.CLI(ctx,"dialplan show 2000@from-gateway")
+ if e!=nil||!strings.Contains(route,"gateway_allowed"){return false}
+ out,e:=p.CLI(ctx,"database get gateway_allowed "+id)
+ return e==nil&&regexp.MustCompile("(?m)Value:\\s*1\\s*$").MatchString(out)
 }
