@@ -19,17 +19,9 @@ As root on Ubuntu 24.04:
 
 Set bot_token, chat_id, user_ids, phones, default_target and sip_host in config.json. Keep provision_enabled false until the separate provisioning setup is verified. Never commit credentials.
 
-## Upgrade from Python
+## Update
 
-Back up config.json and state/ securely. Do not delete the old checkout or stop the working service before compilation. Run as root:
-
-    cd /apps/callkeeper
-    git pull --ff-only
-    bash install.sh
-    callkeeper status
-    callkeeper logs
-
-Do not use the old installed update wrapper for this first upgrade. The installer builds and tests before stopping the service and attempts rollback on startup failure. Old SQLite state is not imported; settings and history start fresh. The current route remains in Asterisk AstDB. Do not run two Telegram polling consumers.
+Back up config.json and state/ securely, then run `callkeeper update` as root. The installer tests and builds before stopping the service. Do not run two Telegram polling consumers.
 
 ## Commands
 
@@ -60,4 +52,4 @@ Optional. The socket worker runs as asterisk, not root. Requires operator-approv
     CGO_ENABLED=0 go build -o callkeeper-bin .
     bash -n install.sh manage.sh
 
-GitHub Actions runs these checks. Live Asterisk and Telegram integration must be tested on the target server. Legacy Python files are retained temporarily for rollback.
+GitHub Actions runs these checks. Live Asterisk and Telegram integration must be tested on the target server.
