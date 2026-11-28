@@ -1,34 +1,23 @@
-name: Publish
+name: Go checks
 on:
-  workflow_dispatch:
   push:
-    branches: [develop]
-    tags: ['v*']
-permissions:
-  contents: read
+    branches: [develop, main]
+  pull_request:
+  workflow_dispatch:
 jobs:
   verify:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - run: python3 -m py_compile callkeeper.py callkeeper-provision
-      - run: python3 -m unittest -v
-      - run: bash -n install.sh && bash -n manage.sh
-      - run: tar -czf callkeeper.tar.gz callkeeper.py callkeeper-provision config.example.json callkeeper.service install.sh manage.sh README.md DEPLOY.md PROVISION.md
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.22.x'
+          cache: false
+      - run: go test -race ./...
+      - run: go vet ./...
+      - run: CGO_ENABLED=0 go build -trimpath -o callkeeper-bin .
+      - run: bash -n install.sh manage.sh
       - uses: actions/upload-artifact@v4
         with:
-          name: callkeeper
-          path: callkeeper.tar.gz
-  release:
-    if: startsWith(github.ref, 'refs/tags/v')
-    needs: verify
-    runs-on: ubuntu-latest
-    permissions:
-      contents: write
-    steps:
-      - uses: actions/download-artifact@v4
-        with:
-          name: callkeeper
-      - run: gh release create "$GITHUB_REF_NAME" callkeeper.tar.gz --repo "$GITHUB_REPOSITORY" --verify-tag --generate-notes --prerelease
-        env:
-          GH_TOKEN: ${{ github.token }}
+          name: callkeeper-linux
+          path: callkeeper-bin
