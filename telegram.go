@@ -52,17 +52,17 @@ func(t *Telegram) Poll(ctx context.Context,offset int64)([]TGUpdate,error){
  return updates,e
 }
 func(t *Telegram) Ack(ctx context.Context,id,text string)error{
- return t.call(ctx,"answerCallbackQuery",map[string]any{"callback_query_id":id,"text":text},nil,5*time.Second)
+ return t.call(ctx,"answerCallbackQuery",map[string]any{"callback_query_id":id,"text":text},nil,15*time.Second)
 }
 func(t *Telegram) Send(ctx context.Context,chat int64,text string,buttons [][]TGButton,protect bool)(TGMessage,error){
  args:=map[string]any{"chat_id":chat,"text":text,"protect_content":protect}
  if len(buttons)>0{args["reply_markup"]=map[string]any{"inline_keyboard":buttons}}
  var msg TGMessage
- e:=t.call(ctx,"sendMessage",args,&msg,8*time.Second)
+ e:=t.call(ctx,"sendMessage",args,&msg,15*time.Second)
  return msg,e
 }
 func(t *Telegram) Delete(ctx context.Context,chat,id int64)error{
- return t.call(ctx,"deleteMessage",map[string]any{"chat_id":chat,"message_id":id},nil,8*time.Second)
+ return t.call(ctx,"deleteMessage",map[string]any{"chat_id":chat,"message_id":id},nil,15*time.Second)
 }
 func(c Config) authorized(user int64,chat TGChat)bool{
  if chat.Type!="private"||chat.ID!=c.ChatID{return false}
