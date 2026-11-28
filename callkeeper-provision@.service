@@ -1,0 +1,16 @@
+[Unit]
+Description=CallKeeper SIP provisioning worker
+[Service]
+User=asterisk
+Group=asterisk
+ExecStart=/apps/callkeeper/callkeeper-bin --provision-helper
+StandardInput=socket
+StandardOutput=socket
+StandardError=journal
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+PrivateTmp=true
+ReadWritePaths=/etc/asterisk/callkeeper
+UMask=0077
+RuntimeMaxSec=120
