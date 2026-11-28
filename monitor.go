@@ -29,15 +29,21 @@ func(a *App) observe(ctx context.Context,id string,up bool,now float64){
   return
  }
  if !up&&(old.Alerted||!notifyEnabled(s,id)||now-*old.Down<float64(a.delay(s))){return}
- if up{
-  if old.Alerted{
-   if _,e:=a.TG.Send(ctx,a.Config.ChatID,fmt.Sprintf("🟢 Восстановлен: %s; %d сек.",a.label(id),int(now-*old.Down)),nil,false);e!=nil{log.Print(e);return}
+ label:=a.label(id)
+ if e:=a.Store.Update(func(v *State)error{
+  if !a.monitoring(*v){return nil}
+  p:=v.Phones[id]
+  if p.Down==nil{return nil}
+  if up{
+   if p.Alerted{enqueueNotification(v,fmt.Sprintf("🟢 Восстановлен: %s; %d сек.",label,int(now-*p.Down)))}
+   v.History=append(v.History,HistoryEntry{ID:id,Started:*p.Down,Ended:now})
+   delete(v.Phones,id)
+  }else if !p.Alerted&&notifyEnabled(*v,id)&&now-*p.Down>=float64(a.delay(*v)){
+   enqueueNotification(v,"🔴 Недоступен: "+label)
+   p.Alerted=true;v.Phones[id]=p
   }
-  if e:=a.Store.Update(func(v *State)error{v.History=append(v.History,HistoryEntry{ID:id,Started:*old.Down,Ended:now});delete(v.Phones,id);return nil});e!=nil{log.Print(e)}
- }else{
-  if _,e:=a.TG.Send(ctx,a.Config.ChatID,"🔴 Недоступен: "+a.label(id),nil,false);e!=nil{log.Print(e);return}
-  if e:=a.Store.Update(func(v *State)error{p:=v.Phones[id];p.Alerted=true;v.Phones[id]=p;return nil});e!=nil{log.Print(e)}
- }
+  return nil
+ });e!=nil{log.Print(e)}
 }
 func(a *App) Monitor(ctx context.Context){
  ticker:=time.NewTicker(time.Duration(a.Config.PollSeconds)*time.Second);defer ticker.Stop()
