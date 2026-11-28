@@ -71,6 +71,8 @@ type App struct{
  Store *Store
  TG *Telegram
  PBX PBX
+ pendingUser int64
+ pendingUntil time.Time
  confirmations map[string]Confirmation
 }
 func NewApp(c Config,s *Store,t *Telegram)*App{return &App{Config:c,Store:s,TG:t,confirmations:map[string]Confirmation{}}}
@@ -97,18 +99,34 @@ func(a *App) Menu(ctx context.Context){
   if p.Target&&(id=="1002"||id=="1003"){label:=id+" — "+p.Name;if id==target{label="✓ "+label};buttons=append(buttons,[]TGButton{{Text:label,Data:"target:"+id}})}
  }
  buttons=append(buttons,[]TGButton{{Text:"Тестовый звонок",Data:"test_confirm"},{Text:"Обновить статус",Data:"menu"}})
+ if a.Config.ProvisionEnabled{buttons=append(buttons,[]TGButton{{Text:"Добавить телефон",Data:"add"}})}
  buttons=append(buttons,[]TGButton{{Text:"Уведомления",Data:"settings"},{Text:"История",Data:"history"}})
  a.send(ctx,strings.Join(lines,"\n"),buttons)
 }
 func(a *App) Handle(ctx context.Context,u TGUpdate){
  if !a.Config.accepts(u){return}
- if u.Callback==nil{if u.Message!=nil{switch u.Message.Text{case "/start","/menu","/status","/cancel":a.Menu(ctx)}};return}
+ if u.Callback==nil{
+  if u.Message==nil{return}
+  switch u.Message.Text{
+  case "/start","/menu","/status","/cancel":a.pendingUser=0;a.Menu(ctx)
+  default:
+   if a.pendingUser==u.Message.From.ID&&time.Now().Before(a.pendingUntil)&&!strings.HasPrefix(u.Message.Text,"/"){
+    a.pendingUser=0
+    if e:=a.CreatePhone(ctx,u.Message.Text);e!=nil{log.Print(e);a.send(ctx,"⚠️ "+e.Error(),nil)}
+   }
+  }
+  return
+ }
  cb:=u.Callback
  now:=time.Now()
  for key,v:=range a.confirmations{if !now.Before(v.Expires){delete(a.confirmations,key)}}
  var e error
  switch {
- case cb.Data=="menu":a.Menu(ctx)
+ case cb.Data=="add":
+  if !a.Config.ProvisionEnabled{a.send(ctx,"Создание аккаунтов отключено.",nil);return}
+  a.pendingUser=cb.From.ID;a.pendingUntil=now.Add(2*time.Minute)
+  a.send(ctx,"Введите название нового телефона или /cancel",nil)
+ case cb.Data=="menu":a.pendingUser=0;a.Menu(ctx)
  case cb.Data=="settings":a.Settings(ctx)
  case cb.Data=="history":a.History(ctx)
  case strings.HasPrefix(cb.Data,"notify:")||strings.HasPrefix(cb.Data,"delay:")||strings.HasPrefix(cb.Data,"monitor:"):e=a.ChangeSetting(ctx,cb.Data)
