@@ -14,12 +14,14 @@ import (
 func main(){
  root:=flag.String("root","/apps/callkeeper","application directory")
  check:=flag.Bool("check",false,"validate configuration and JSON state")
+ helper:=flag.Bool("provision-helper",false,"run socket-activated provisioning worker")
  flag.Parse()
+ if *helper{if e:=provisionHelper();e!=nil{log.Print("provisioning failed; inspect PBX locally");os.Exit(1)};return}
  c,e:=LoadConfig(filepath.Join(*root,"config.json"));if e!=nil{log.Fatal(e)}
  path:=filepath.Join(*root,"state","state.json")
  s,e:=OpenStore(path);if e!=nil{log.Fatal(e)}
  if *check{fmt.Println("Configuration and JSON state validation passed");return}
- if c.ProvisionEnabled{log.Fatal("Provisioning must remain disabled until the helper and dialplan are installed")}
+ if e=os.MkdirAll(filepath.Dir(path),0700);e!=nil{log.Fatal(e)}
  lock,e:=os.OpenFile(filepath.Join(*root,"state",".go.lock"),os.O_CREATE|os.O_RDWR,0600)
  if e!=nil{log.Fatal(e)}
  defer lock.Close()
