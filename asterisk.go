@@ -97,6 +97,7 @@ func(a *App) Menu(ctx context.Context){
   if p.Target&&(id=="1002"||id=="1003"){label:=id+" — "+p.Name;if id==target{label="✓ "+label};buttons=append(buttons,[]TGButton{{Text:label,Data:"target:"+id}})}
  }
  buttons=append(buttons,[]TGButton{{Text:"Тестовый звонок",Data:"test_confirm"},{Text:"Обновить статус",Data:"menu"}})
+ buttons=append(buttons,[]TGButton{{Text:"Уведомления",Data:"settings"},{Text:"История",Data:"history"}})
  a.send(ctx,strings.Join(lines,"\n"),buttons)
 }
 func(a *App) Handle(ctx context.Context,u TGUpdate){
@@ -108,6 +109,9 @@ func(a *App) Handle(ctx context.Context,u TGUpdate){
  var e error
  switch {
  case cb.Data=="menu":a.Menu(ctx)
+ case cb.Data=="settings":a.Settings(ctx)
+ case cb.Data=="history":a.History(ctx)
+ case strings.HasPrefix(cb.Data,"notify:")||strings.HasPrefix(cb.Data,"delay:")||strings.HasPrefix(cb.Data,"monitor:"):e=a.ChangeSetting(ctx,cb.Data)
  case strings.HasPrefix(cb.Data,"target:"):
   e=a.PBX.SetTarget(ctx,strings.TrimPrefix(cb.Data,"target:"),a.Phones());if e==nil{a.Menu(ctx)}
  case cb.Data=="test_confirm":
