@@ -2,3 +2,5 @@ config.json
 state/
 __pycache__/
 *.pyc
+callkeeper-bin
+.install.*/
