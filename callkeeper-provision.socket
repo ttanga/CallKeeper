@@ -1,0 +1,11 @@
+[Unit]
+Description=CallKeeper SIP provisioning socket
+[Socket]
+ListenStream=/run/callkeeper-provision.sock
+SocketMode=0660
+SocketUser=root
+SocketGroup=asterisk
+Accept=yes
+MaxConnections=1
+[Install]
+WantedBy=sockets.target
