@@ -1,9 +1,13 @@
-# Provisioning (manual preflight required)
+# Go SIP provisioning
 
-Do not enable on an unverified PBX. As root inspect the current dialplan and TLS transport. The inbound extension 2000 must route to a numeric AstDB target including newly allocated IDs 1004–1999; validate the target against existing endpoints. Preserve existing outbound rules. The gateway must call 2000.
+Keep provision_enabled false until operator setup is complete.
 
-Create /etc/asterisk/pjsip_callkeeper.conf as root:asterisk mode 0640 (do not overwrite existing content), add #include "pjsip_callkeeper.conf" to pjsip.conf once, reload and verify. Install helper using install -o root -g root -m 0755 callkeeper-provision /usr/local/sbin/callkeeper-provision. Use visudo to grant only /usr/local/sbin/callkeeper-provision with no arguments to the service account. The current service NoNewPrivileges and ProtectSystem settings prevent sudo and writing /etc: an operator must configure a separate privileged helper service or explicitly relax those restrictions before enabling. Do not enable until this integration is reviewed. The helper itself accepts only a random hex password via stdin and never arbitrary CLI commands.
+The gateway must call 2000@from-gateway. Configure the dialplan to validate numeric targets against AstDB gateway_allowed, preserving existing outbound rules. Seed existing permitted targets and verify routing before enabling new accounts.
 
-After successful preflight create root-owned /etc/asterisk/callkeeper-provision.enabled and set provision_enabled true. New phone descriptions persist in SQLite. Password delivery is protected against ordinary forwarding and deletion is retried after restart; Telegram is not E2EE. If sending fails after creation, reset credentials manually. Deletion is best effort.
+Create /etc/asterisk/callkeeper owned by asterisk with mode 0700 and an empty phones.conf owned by asterisk with mode 0600 if absent. Never overwrite existing accounts. Add #include "callkeeper/phones.conf" to pjsip.conf once. Reload and verify TLS transport and existing endpoints. Create the root-owned /etc/asterisk/callkeeper-provision.enabled marker only after review.
 
-This is a development preview, not a validated production installer.
+The installer installs callkeeper-provision.socket and callkeeper-provision@.service. Enable the socket with systemctl enable --now callkeeper-provision.socket after preflight. Set provision_enabled true and restart callkeeper. Stop the socket before upgrades and restart it afterwards. The helper runs as asterisk with restricted filesystem access; no sudo rule is needed.
+
+New device names persist in state/state.json. SIP passwords remain in the managed Asterisk configuration. Telegram credential delivery is protected against ordinary forwarding; deletion is best effort and Telegram is not E2EE. If delivery fails after account creation, reset credentials manually.
+
+Live provisioning and dynamic routing require verification on the target PBX.
