@@ -16,7 +16,13 @@ type HistoryEntry struct {
  Started float64 `json:"started"`
  Ended float64 `json:"ended"`
 }
+type Notification struct {
+ ID int64 `json:"id"`
+ Text string `json:"text"`
+}
 type State struct {
+ Notifications []Notification `json:"notifications"`
+ NextNotificationID int64 `json:"next_notification_id"`
  Version int `json:"version"`
  Devices map[string]string `json:"devices"`
  Settings map[string]string `json:"settings"`
